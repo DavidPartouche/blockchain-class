@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -91,5 +93,55 @@ func run() error {
 
 	fmt.Println("PUB: " + crypto.PubkeyToAddress(*publicKey).String())
 
+	vv, r, s, err := ToVRSFromHexSignature(hexutil.Encode(sig2))
+	if err != nil {
+		return fmt.Errorf("unable to VRS: %w", err)
+	}
+
+	fmt.Println("V|R|S", vv, r, s)
+
 	return nil
 }
+
+// ToVRSFromHexSignature converts a hex representation of the signature into
+// its R, S and V parts.
+func ToVRSFromHexSignature(sigStr string) (v, r, s *big.Int, err error) {
+	sig, err := hex.DecodeString(sigStr[2:])
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	r = big.NewInt(0).SetBytes(sig[:32])
+	s = big.NewInt(0).SetBytes(sig[32:64])
+	v = big.NewInt(0).SetBytes([]byte{sig[64]})
+
+	return v, r, s, nil
+}
+
+// ToSignatureBytes converts the r, s, v values into a slice of bytes
+// with the removal of the ardanID.
+/*func ToSignatureBytes(v, r, s *big.Int) []byte {
+	sig := make([]byte, crypto.SignatureLength)
+
+	rBytes := make([]byte, 32)
+	r.FillBytes(rBytes)
+	copy(sig, rBytes)
+
+	sBytes := make([]byte, 32)
+	s.FillBytes(sBytes)
+	copy(sig[32:], sBytes)
+
+	sig[64] = byte(v.Uint64() - ardanID)
+
+	return sig
+}
+
+// ToSignatureBytesWithArdanID converts the r, s, v values into a slice of bytes
+// keeping the Ardan id.
+func ToSignatureBytesWithArdanID(v, r, s *big.Int) []byte {
+	sig := ToSignatureBytes(v, r, s)
+	sig[64] = byte(v.Uint64())
+
+	return sig
+}
+*/
